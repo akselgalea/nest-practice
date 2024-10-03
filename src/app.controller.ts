@@ -14,9 +14,4 @@ export class AppController {
 	postHello(): object {
 		return this.appService.getHello();
 	}
-
-	@Post("login")
-	login() {
-		return "hola";
-	}
 }

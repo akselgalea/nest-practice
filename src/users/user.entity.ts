@@ -1,9 +1,12 @@
+import { Role } from "src/roles/role.entity";
 import {
 	Entity,
 	Column,
 	PrimaryGeneratedColumn,
 	CreateDateColumn,
 	UpdateDateColumn,
+	ManyToMany,
+	JoinTable,
 } from "typeorm";
 
 @Entity()
@@ -13,6 +16,7 @@ export class User {
 
 	@Column({
 		length: 50,
+		unique: true,
 	})
 	username: string;
 
@@ -37,4 +41,8 @@ export class User {
 
 	@Column({ type: "boolean", default: true })
 	active: boolean;
+
+	@ManyToMany(() => Role)
+	@JoinTable()
+	roles: Role[];
 }

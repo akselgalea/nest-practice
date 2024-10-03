@@ -1,53 +1,83 @@
-import { Injectable, Inject, HttpException, HttpStatus, UnauthorizedException } from "@nestjs/common";
-import type { Repository } from "typeorm";
-import { User } from "./user.entity";
-import { comparePasswords, encryptPassword } from "./users.utils";
+import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { CreateUserDto } from "./dto/create.input";
+import { encryptPassword } from "src/auth/auth.utils";
+import { RolesEnum } from "src/enums/roles.enum";
+import { Role } from "src/roles/role.entity";
+import { In, Repository } from "typeorm";
+import type { CreateUserDto } from "./dto/create-user.dto";
+import { User } from "./user.entity";
 
 @Injectable()
 export class UsersService {
 	constructor(
 		@InjectRepository(User) private userRepository: Repository<User>,
-	) { }
+		@InjectRepository(Role) private roleRepository: Repository<Role>,
+	) {}
 
 	findAll(): Promise<User[]> {
-		return this.userRepository.find();
+		return this.userRepository.find({
+			relations: {
+				roles: true,
+			},
+		});
 	}
 
-	getByEmail(email: string): Promise<User> {
-		return this.userRepository.findOneBy({ email });
+	exists(email: string, username: string): Promise<User> {
+		return this.userRepository.findOne({
+			where: [
+				{ email, active: true },
+				{ username, active: true },
+			],
+			relations: {
+				roles: true,
+			},
+		});
+	}
+
+	getByEmailOrUsername(input: string): Promise<User> {
+		return this.userRepository.findOne({
+			where: [
+				{ email: input, active: true },
+				{ username: input, active: true },
+			],
+		});
 	}
 
 	getById(id: string): Promise<User> {
-		return this.userRepository.findOneBy({ id });
+		return this.userRepository.findOne({
+			where: {
+				id,
+			},
+			relations: { roles: true },
+		});
 	}
 
 	async createUser(user: CreateUserDto): Promise<User> {
-		const usr = await this.getByEmail(user.email)
+		const usr = await this.exists(user.email, user.username);
 
 		if (usr) {
-			throw new HttpException("User already exists", HttpStatus.UNPROCESSABLE_ENTITY);
+			throw new HttpException(
+				"User already exists",
+				HttpStatus.UNPROCESSABLE_ENTITY,
+			);
 		}
 
+		const { name, username, email, active } = user;
 		const password = await encryptPassword(user.password);
 
-		return this.userRepository.save({ ...user, password });
-	}
+		const hasRoles = user?.roles !== undefined;
 
-	async login(email: string, password: string) {
-		const user = await this.getByEmail(email);
+		const roles = await this.roleRepository.findBy({
+			name: In(hasRoles && user.roles.length ? user.roles : [RolesEnum.User]),
+		});
 
-		if (!user) {
-			throw new UnauthorizedException();
-		}
-
-		const match = await comparePasswords(password, user.password);
-
-		if (!match) {
-			throw new UnauthorizedException();
-		}
-
-		return user;
+		return this.userRepository.save({
+			name,
+			username,
+			email,
+			password,
+			active,
+			roles,
+		});
 	}
 }
