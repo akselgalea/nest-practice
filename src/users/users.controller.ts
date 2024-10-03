@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Post, Req } from "@nestjs/common";
-import type { Request } from "express";
 import { UsersService } from "./users.service";
 import { LoginDto } from "./dto/auth/login.input";
+import { CreateUserDto } from "./dto/create.input";
 
 @Controller("users")
 export class UsersController {
-	constructor(private readonly usersService: UsersService) {}
+	constructor(private readonly usersService: UsersService) { }
 
 	@Get()
 	findAll() {
@@ -16,5 +16,11 @@ export class UsersController {
 	login(@Body() body: LoginDto) {
 		console.log(body);
 		return this.usersService.login(body.email, body.password);
+	}
+
+	@Post()
+	createUser(@Body() body: CreateUserDto) {
+		console.log(body);
+		return this.usersService.createUser(body);
 	}
 }

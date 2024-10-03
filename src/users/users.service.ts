@@ -1,14 +1,15 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Injectable, Inject, HttpException, HttpStatus, UnauthorizedException } from "@nestjs/common";
 import type { Repository } from "typeorm";
 import { User } from "./user.entity";
-import { comparePasswords } from "./users.utils";
+import { comparePasswords, encryptPassword } from "./users.utils";
 import { InjectRepository } from "@nestjs/typeorm";
+import { CreateUserDto } from "./dto/create.input";
 
 @Injectable()
 export class UsersService {
 	constructor(
 		@InjectRepository(User) private userRepository: Repository<User>,
-	) {}
+	) { }
 
 	findAll(): Promise<User[]> {
 		return this.userRepository.find();
@@ -22,21 +23,29 @@ export class UsersService {
 		return this.userRepository.findOneBy({ id });
 	}
 
-	createUser(user: User) {
-		return this.userRepository.create(user);
+	async createUser(user: CreateUserDto): Promise<User> {
+		const usr = await this.getByEmail(user.email)
+
+		if (usr) {
+			throw new HttpException("User already exists", HttpStatus.UNPROCESSABLE_ENTITY);
+		}
+
+		const password = await encryptPassword(user.password);
+
+		return this.userRepository.save({ ...user, password });
 	}
 
 	async login(email: string, password: string) {
 		const user = await this.getByEmail(email);
 
 		if (!user) {
-			return { status: 404, error: "user not found" };
+			throw new UnauthorizedException();
 		}
 
 		const match = await comparePasswords(password, user.password);
 
 		if (!match) {
-			return { status: 422, error: "the passwords do not match" };
+			throw new UnauthorizedException();
 		}
 
 		return user;
