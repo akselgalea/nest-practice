@@ -29,5 +29,5 @@ export class CreateUserDto {
 
 	@IsOptional()
 	@IsArray()
-	roles?: string[];
+	roles?: number[];
 }

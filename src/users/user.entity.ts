@@ -5,6 +5,7 @@ import {
 	PrimaryGeneratedColumn,
 	CreateDateColumn,
 	UpdateDateColumn,
+	DeleteDateColumn,
 	ManyToMany,
 	JoinTable,
 } from "typeorm";
@@ -39,8 +40,8 @@ export class User {
 	@UpdateDateColumn({ nullable: true })
 	updated_at: Date;
 
-	@Column({ type: "boolean", default: true })
-	active: boolean;
+	@DeleteDateColumn({ nullable: true })
+	deleted_at: Date;
 
 	@ManyToMany(() => Role)
 	@JoinTable()
